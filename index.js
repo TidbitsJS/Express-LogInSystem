@@ -1,3 +1,4 @@
+const Joi = require("joi");
 const express = require("express");
 const bcrypt = require("bcrypt");
 
@@ -15,6 +16,9 @@ app.get("/users", (req, res) => {
 });
 
 app.post("/users", async (req, res) => {
+  const { error } = validateUser(req.body);
+  if (error) return res.status(401).send(error.details[0].message);
+
   try {
     const salt = await bcrypt.genSalt();
     const newUser = req.body;
@@ -30,6 +34,9 @@ app.post("/users", async (req, res) => {
 });
 
 app.post("/users/login", async (req, res) => {
+  const { error } = validateUser(req.body);
+  if (error) return res.status(401).send(error.details[0].message);
+
   try {
     const userCheck = users.find((c) => c.name === req.body.name);
     if (!userCheck) return res.status(404).send("User does not exist!");
@@ -45,3 +52,13 @@ app.post("/users/login", async (req, res) => {
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Listening on port ${port} ...`));
+
+const validateUser = (user) => {
+  const schema = Joi.object({
+    name: Joi.string().min(5).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).required(),
+  });
+
+  return schema.validate(user);
+};
