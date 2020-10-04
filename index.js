@@ -19,6 +19,10 @@ app.post("/users", async (req, res) => {
   const { error } = validateUser(req.body);
   if (error) return res.status(401).send(error.details[0].message);
 
+  const userCheck = users.find((c) => c.name === req.body.name);
+  if (userCheck)
+    return res.status(401).send("User already exist. Try different!");
+
   try {
     const salt = await bcrypt.genSalt();
     const newUser = req.body;
