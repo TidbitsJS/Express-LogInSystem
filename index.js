@@ -12,6 +12,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/users", (req, res) => {
+  if (users.length === 0) return res.send("Users on Leave. Visit tomorrow!");
   res.send(users);
 });
 
@@ -27,6 +28,7 @@ app.post("/users", async (req, res) => {
     const salt = await bcrypt.genSalt();
     const newUser = req.body;
     newUser.id = users.length + 1;
+    newUser.log = false;
     newUser.password = await bcrypt.hash(newUser.password, salt);
 
     users.push(newUser);
@@ -48,6 +50,7 @@ app.post("/users/login", async (req, res) => {
     const check = await bcrypt.compare(req.body.password, userCheck.password);
     if (!check) return res.status(401).send("Password did not Match!");
 
+    userCheck.log = true;
     res.send("Successfully Logged In!");
   } catch (e) {
     res.status(500).send(e.message);
