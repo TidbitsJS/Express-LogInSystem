@@ -62,33 +62,42 @@ app.post("/users/login", async (req, res) => {
   }
 });
 
-app.put("/users/login/:username", (req, res) => {
-  const newUser = users[req.params.username];
-  if (!newUser)
-    return res.status(404).send(`${req.params.username} does not exist`);
+app.put("/users/login/:username", async (req, res) => {
+  try {
+    const newUser = users[req.params.username];
+    if (!newUser)
+      return res.status(404).send(`${req.params.username} does not exist`);
 
-  const { error } = validateUser(req.body);
-  if (error) return res.status(401).send(error.details[0].message);
+    const { error } = validateUser(req.body);
+    if (error) return res.status(401).send(error.details[0].message);
 
-  if (/\s/g.test(req.body.username))
-    return res.status(401).send("Strictly no to Whitespace!");
+    if (/\s/g.test(req.body.username))
+      return res.status(401).send("Strictly no to Whitespace!");
 
-  const uniqueUsername = users[req.body.username];
-  if (uniqueUsername)
-    return res
-      .status(500)
-      .send(
-        `User with username ${req.body.username} already exist. Try Unique!`
-      );
+    const uniqueUsername = users[req.body.username];
+    if (uniqueUsername)
+      return res
+        .status(500)
+        .send(
+          `User with username ${req.body.username} already exist. Try Unique!`
+        );
 
-  newUser.username = req.body.username;
-  newUser.email = req.body.email;
-  newUser.password = req.body.password;
+    const check = await bcrypt.compare(req.body.password, newUser.password);
+    if (!check)
+      return res.status(401).send("Access Denied. Password failed to Match!");
 
-  users[newUser.username] = newUser;
-  delete users[req.params.username];
+    newUser.username = req.body.username;
+    newUser.email = req.body.email;
+    const salt = await bcrypt.genSalt();
+    newUser.password = await bcrypt.hash(newUser.password, salt);
 
-  res.send(newUser);
+    users[newUser.username] = newUser;
+    delete users[req.params.username];
+
+    res.send(newUser);
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
 });
 
 const port = process.env.PORT || 3000;
