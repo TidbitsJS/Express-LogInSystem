@@ -5,7 +5,7 @@ const bcrypt = require("bcrypt");
 const app = express();
 app.use(express.json());
 
-const users = [];
+const users = {};
 const idCheck = 347820;
 
 app.get("/", (req, res) => {
@@ -13,7 +13,6 @@ app.get("/", (req, res) => {
 });
 
 app.get("/users", (req, res) => {
-  if (users.length === 0) return res.send("Users on Leave. Visit tomorrow!");
   res.send(users);
 });
 
@@ -21,18 +20,20 @@ app.post("/users", async (req, res) => {
   const { error } = validateUser(req.body);
   if (error) return res.status(401).send(error.details[0].message);
 
-  const userCheck = users.find((c) => c.username === req.body.username);
+  if (/\s/g.test(req.body.username))
+    return res.status(401).send("Strictly no to Whitespace!");
+  const userCheck = users[req.body.username];
   if (userCheck)
     return res.status(401).send("User already exist. Try different!");
 
   try {
     const salt = await bcrypt.genSalt();
     const newUser = req.body;
-    newUser.id = idCheck + users.length + 1;
+    newUser.id = idCheck + Object.keys(users).length + 1;
     newUser.log = false;
     newUser.password = await bcrypt.hash(newUser.password, salt);
 
-    users.push(newUser);
+    users[newUser.username] = newUser;
 
     res.status(201).send(newUser);
   } catch (e) {
@@ -44,8 +45,11 @@ app.post("/users/login", async (req, res) => {
   const { error } = validateUser(req.body);
   if (error) return res.status(401).send(error.details[0].message);
 
+  if (/\s/g.test(req.body.username))
+    return res.status(401).send("Strictly no to Whitespace!");
+
   try {
-    const userCheck = users.find((c) => c.username === req.body.username);
+    const userCheck = users[req.body.username];
     if (!userCheck) return res.status(404).send("User does not exist!");
 
     const check = await bcrypt.compare(req.body.password, userCheck.password);
@@ -58,18 +62,33 @@ app.post("/users/login", async (req, res) => {
   }
 });
 
-app.get("/users/login", (req, res) => {
-  const loggedUsers = [];
-  users.map((c) => {
-    if (c.log === true) {
-      loggedUsers.push(c);
-    }
-  });
+app.put("/users/login/:username", (req, res) => {
+  const newUser = users[req.params.username];
+  if (!newUser)
+    return res.status(404).send(`${req.params.username} does not exist`);
 
-  if (loggedUsers.length === 0)
-    return res.status(404).send("No one has logged in yet!");
+  const { error } = validateUser(req.body);
+  if (error) return res.status(401).send(error.details[0].message);
 
-  res.send(loggedUsers);
+  if (/\s/g.test(req.body.username))
+    return res.status(401).send("Strictly no to Whitespace!");
+
+  const uniqueUsername = users[req.body.username];
+  if (uniqueUsername)
+    return res
+      .status(500)
+      .send(
+        `User with username ${req.body.username} already exist. Try Unique!`
+      );
+
+  newUser.username = req.body.username;
+  newUser.email = req.body.email;
+  newUser.password = req.body.password;
+
+  users[newUser.username] = newUser;
+  delete users[req.params.username];
+
+  res.send(newUser);
 });
 
 const port = process.env.PORT || 3000;
