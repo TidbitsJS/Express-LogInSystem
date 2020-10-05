@@ -6,6 +6,7 @@ const app = express();
 app.use(express.json());
 
 const users = [];
+const idCheck = 347820;
 
 app.get("/", (req, res) => {
   res.send("Hello from NodeJs");
@@ -27,7 +28,7 @@ app.post("/users", async (req, res) => {
   try {
     const salt = await bcrypt.genSalt();
     const newUser = req.body;
-    newUser.id = users.length + 1;
+    newUser.id = idCheck + users.length + 1;
     newUser.log = false;
     newUser.password = await bcrypt.hash(newUser.password, salt);
 
@@ -55,6 +56,20 @@ app.post("/users/login", async (req, res) => {
   } catch (e) {
     res.status(500).send(e.message);
   }
+});
+
+app.get("/users/login", (req, res) => {
+  const loggedUsers = [];
+  users.map((c) => {
+    if (c.log === true) {
+      loggedUsers.push(c);
+    }
+  });
+
+  if (loggedUsers.length === 0)
+    return res.status(404).send("No one has logged in yet!");
+
+  res.send(loggedUsers);
 });
 
 const port = process.env.PORT || 3000;
