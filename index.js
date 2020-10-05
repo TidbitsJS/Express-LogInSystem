@@ -21,7 +21,7 @@ app.post("/users", async (req, res) => {
   const { error } = validateUser(req.body);
   if (error) return res.status(401).send(error.details[0].message);
 
-  const userCheck = users.find((c) => c.name === req.body.name);
+  const userCheck = users.find((c) => c.username === req.body.username);
   if (userCheck)
     return res.status(401).send("User already exist. Try different!");
 
@@ -45,7 +45,7 @@ app.post("/users/login", async (req, res) => {
   if (error) return res.status(401).send(error.details[0].message);
 
   try {
-    const userCheck = users.find((c) => c.name === req.body.name);
+    const userCheck = users.find((c) => c.username === req.body.username);
     if (!userCheck) return res.status(404).send("User does not exist!");
 
     const check = await bcrypt.compare(req.body.password, userCheck.password);
@@ -77,7 +77,7 @@ app.listen(port, () => console.log(`Listening on port ${port} ...`));
 
 const validateUser = (user) => {
   const schema = Joi.object({
-    name: Joi.string().min(5).required(),
+    username: Joi.string().min(5).required(),
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
   });
